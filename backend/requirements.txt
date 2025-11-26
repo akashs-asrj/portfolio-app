@@ -9,6 +9,7 @@ requests
 beautifulsoup4
 selenium
 pdfplumber
+flask-cors
 yake
 python-dateutil
 gunicorn
