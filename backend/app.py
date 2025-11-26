@@ -10,8 +10,9 @@ from main import run_analysis_from_flask
 BACKEND_DIR = os.path.dirname(os.path.abspath(__file__))
 
 UPLOAD_FOLDER = os.path.join(BACKEND_DIR, "uploads")
-REPORT_FOLDER = os.path.join(BACKEND_DIR, "reports")
+REPORT_FOLDER = os.path.join(BACKEND_DIR, "backend", "reports")
 SCREENSHOT_FOLDER = os.path.join(REPORT_FOLDER, "screenshots")
+
 
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(REPORT_FOLDER, exist_ok=True)
