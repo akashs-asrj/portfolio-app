@@ -8,7 +8,6 @@ from main import run_analysis_from_flask
 # PATH SETUP
 # ---------------------------------------
 BACKEND_DIR = os.path.dirname(os.path.abspath(__file__))
-FRONTEND_DIR = os.path.join(BACKEND_DIR, "..", "frontend")
 
 UPLOAD_FOLDER = os.path.join(BACKEND_DIR, "uploads")
 REPORT_FOLDER = os.path.join(BACKEND_DIR, "reports")
@@ -19,15 +18,15 @@ os.makedirs(REPORT_FOLDER, exist_ok=True)
 os.makedirs(SCREENSHOT_FOLDER, exist_ok=True)
 
 # ---------------------------------------
-# FLASK APP
+# FLASK APP (NEW: local templates/static)
 # ---------------------------------------
 app = Flask(
     __name__,
-    template_folder=os.path.join(FRONTEND_DIR, "templates"),
-    static_folder=os.path.join(FRONTEND_DIR, "static")
+    template_folder="templates",  # now inside backend/templates
+    static_folder="static"        # now inside backend/static
 )
 
-# Enable CORS for frontend (Firebase / Railway / Anywhere)
+# Enable CORS for frontend (Firebase / anywhere)
 CORS(app)
 
 # ---------------------------------------
@@ -102,7 +101,6 @@ def get_reports():
         screenshot_raw = raw.get("screenshot")
         screenshot_url = None
         if screenshot_raw:
-            # hosted path
             screenshot_url = f"/reports/screenshots/{os.path.basename(screenshot_raw)}"
 
         # -------------------------
@@ -158,5 +156,5 @@ def get_reports():
 # RAILWAY ENTRY POINT
 # ---------------------------------------
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 8080))  # Railway provides PORT
+    port = int(os.environ.get("PORT", 8080))
     app.run(host="0.0.0.0", port=port)
