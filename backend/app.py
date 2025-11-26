@@ -1,4 +1,5 @@
 from flask import Flask, render_template, request, jsonify, send_from_directory
+from flask_cors import CORS
 import os
 import json
 from main import run_analysis_from_flask
@@ -11,13 +12,14 @@ FRONTEND_DIR = os.path.join(BACKEND_DIR, "..", "frontend")
 
 UPLOAD_FOLDER = os.path.join(BACKEND_DIR, "uploads")
 REPORT_FOLDER = os.path.join(BACKEND_DIR, "reports")
+SCREENSHOT_FOLDER = os.path.join(REPORT_FOLDER, "screenshots")
 
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(REPORT_FOLDER, exist_ok=True)
-os.makedirs(os.path.join(REPORT_FOLDER, "screenshots"), exist_ok=True)
+os.makedirs(SCREENSHOT_FOLDER, exist_ok=True)
 
 # ---------------------------------------
-# FLASK APP WITH CUSTOM TEMPLATE + STATIC PATHS
+# FLASK APP
 # ---------------------------------------
 app = Flask(
     __name__,
@@ -25,9 +27,13 @@ app = Flask(
     static_folder=os.path.join(FRONTEND_DIR, "static")
 )
 
+# Enable CORS for frontend (Firebase / Railway / Anywhere)
+CORS(app)
+
 # ---------------------------------------
 # ROUTES
 # ---------------------------------------
+
 @app.route("/")
 def home():
     return render_template("index.html")
@@ -38,13 +44,13 @@ def results_page():
     return render_template("results.html")
 
 
-# Serve screenshots from backend/reports/screenshots
+# Serve case study screenshots
 @app.route("/reports/screenshots/<path:filename>")
 def report_screenshots(filename):
-    screenshots_dir = os.path.join(REPORT_FOLDER, "screenshots")
-    return send_from_directory(screenshots_dir, filename)
+    return send_from_directory(SCREENSHOT_FOLDER, filename)
 
 
+# Main analysis endpoint
 @app.route("/analyze", methods=["POST"])
 def analyze():
     portfolio_url = request.form.get("portfolioUrl")
@@ -60,10 +66,13 @@ def analyze():
     resume_path = os.path.join(UPLOAD_FOLDER, safe_name)
     resume.save(resume_path)
 
-    # Clear old reports
+    # Clear old JSON reports
     for file in os.listdir(REPORT_FOLDER):
         if file.endswith(".json"):
-            os.remove(os.path.join(REPORT_FOLDER, file))
+            try:
+                os.remove(os.path.join(REPORT_FOLDER, file))
+            except:
+                pass
 
     # Run backend pipeline
     try:
@@ -74,9 +83,9 @@ def analyze():
     return jsonify({"message": "analysis_complete"})
 
 
-@app.route("/reports")
+# Fetch all JSON reports
+@app.route("/reports", methods=["GET"])
 def get_reports():
-
     results = []
     report_files = sorted(os.listdir(REPORT_FOLDER))
 
@@ -89,12 +98,12 @@ def get_reports():
         with open(file_path, "r", encoding="utf-8") as f:
             raw = json.load(f)
 
-        # Normalize screenshot path (IMPORTANT FIX)
+        # Normalize screenshot path
         screenshot_raw = raw.get("screenshot")
         screenshot_url = None
         if screenshot_raw:
-            # Always convert to /reports/screenshots/<file>
-            screenshot_url = "backend/reports/screenshots/" + os.path.basename(screenshot_raw)
+            # hosted path
+            screenshot_url = f"/reports/screenshots/{os.path.basename(screenshot_raw)}"
 
         # -------------------------
         # MAIN PORTFOLIO REPORT
@@ -145,5 +154,9 @@ def get_reports():
     return jsonify(results)
 
 
+# ---------------------------------------
+# RAILWAY ENTRY POINT
+# ---------------------------------------
 if __name__ == "__main__":
-    app.run(debug=True)
+    port = int(os.environ.get("PORT", 8080))  # Railway provides PORT
+    app.run(host="0.0.0.0", port=port)
