@@ -7,7 +7,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     root.innerHTML = `<div class="loading">Loading analysis results...</div>`;
 
     try {
-        const res = await fetch("backend/reports");
+        const res = await fetch("/reports");
         const data = await res.json();
         renderResults(root, data || []);
     } catch (err) {
@@ -144,7 +144,7 @@ function renderCaseStudyDropdown(cs, index) {
 
 if (cs.screenshot) {
     const clean = cs.screenshot.split("/").pop();
-    screenshot = `backend/reports/screenshots/${clean}`;
+    screenshot = `/reports/screenshots/${clean}`;
 }
 
 
