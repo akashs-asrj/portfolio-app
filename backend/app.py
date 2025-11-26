@@ -133,7 +133,8 @@ def get_reports():
         # -------------------------
         # CASE STUDY
         # -------------------------
-        elif "scraped_data" in raw:
+        elif "scraped_data" in raw or "projectDetails" in raw or "analysis" in raw:
+
 
             results.append({
                 "type": "case_study",
