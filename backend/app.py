@@ -4,12 +4,10 @@ import os
 import json
 from main import run_analysis_from_flask
 
-# -----------------------------------------------------
-# FIXED PATH SETUP (WORKS ON RAILWAY + LOCALHOST)
-# -----------------------------------------------------
-ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-BACKEND_DIR = os.path.join(ROOT_DIR, "backend")
-FRONTEND_DIR = os.path.join(ROOT_DIR, "frontend")
+# ---------------------------------------
+# PATH SETUP
+# ---------------------------------------
+BACKEND_DIR = os.path.dirname(os.path.abspath(__file__))
 
 UPLOAD_FOLDER = os.path.join(BACKEND_DIR, "uploads")
 REPORT_FOLDER = os.path.join(BACKEND_DIR, "reports")
@@ -19,20 +17,21 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(REPORT_FOLDER, exist_ok=True)
 os.makedirs(SCREENSHOT_FOLDER, exist_ok=True)
 
-# -----------------------------------------------------
-# FLASK APP INITIALIZATION
-# -----------------------------------------------------
+# ---------------------------------------
+# FLASK APP (NEW: local templates/static)
+# ---------------------------------------
 app = Flask(
     __name__,
-    template_folder=os.path.join(FRONTEND_DIR, "templates"),
-    static_folder=os.path.join(FRONTEND_DIR, "static")
+    template_folder="templates",  # now inside backend/templates
+    static_folder="static"        # now inside backend/static
 )
 
-CORS(app)  # allow frontend to talk to backend
+# Enable CORS for frontend (Firebase / anywhere)
+CORS(app)
 
-# -----------------------------------------------------
+# ---------------------------------------
 # ROUTES
-# -----------------------------------------------------
+# ---------------------------------------
 
 @app.route("/")
 def home():
@@ -50,9 +49,7 @@ def report_screenshots(filename):
     return send_from_directory(SCREENSHOT_FOLDER, filename)
 
 
-# ---------------------------
-# ANALYZE PORTFOLIO ENDPOINT
-# ---------------------------
+# Main analysis endpoint
 @app.route("/analyze", methods=["POST"])
 def analyze():
     portfolio_url = request.form.get("portfolioUrl")
@@ -63,6 +60,7 @@ def analyze():
     if not resume:
         return jsonify({"error": "Resume file missing"}), 400
 
+    # Save resume safely
     safe_name = resume.filename.replace(" ", "_")
     resume_path = os.path.join(UPLOAD_FOLDER, safe_name)
     resume.save(resume_path)
@@ -75,6 +73,7 @@ def analyze():
             except:
                 pass
 
+    # Run backend pipeline
     try:
         run_analysis_from_flask(portfolio_url, resume_path)
     except Exception as e:
@@ -83,15 +82,14 @@ def analyze():
     return jsonify({"message": "analysis_complete"})
 
 
-# ---------------------------
-# FETCH ALL REPORTS (MAIN API)
-# ---------------------------
+# Fetch all JSON reports
 @app.route("/reports", methods=["GET"])
 def get_reports():
     results = []
     report_files = sorted(os.listdir(REPORT_FOLDER))
 
     for file in report_files:
+
         if not file.endswith(".json"):
             continue
 
@@ -101,15 +99,15 @@ def get_reports():
 
         analysis = raw.get("analysis", {})
 
-        # Normalize screenshot path
+        # screenshot normalization
         screenshot_raw = raw.get("screenshot")
         screenshot_url = None
         if screenshot_raw:
             screenshot_url = f"/reports/screenshots/{os.path.basename(screenshot_raw)}"
 
-        # ---------------------------------
-        #   MAIN PORTFOLIO REPORT
-        # ---------------------------------
+        # -------------------------
+        # PORTFOLIO
+        # -------------------------
         if "structured_content" in raw:
 
             structured = raw.get("structured_content", {})
@@ -117,7 +115,6 @@ def get_reports():
             results.append({
                 "type": "portfolio",
                 "url": raw.get("url", ""),
-
                 "hero": structured.get("hero", ""),
                 "about": structured.get("about", ""),
                 "skills": structured.get("skills", []),
@@ -125,16 +122,16 @@ def get_reports():
                 "contact": structured.get("contact", {}),
                 "links": structured.get("all_links", []),
 
-                # FIXED: normalize both keys
+                # FIXED KEYS
                 "overall_feedback": analysis.get("overall_feedback")
-                                      or analysis.get("overall score")
-                                      or "",
+                                   or analysis.get("overall score")
+                                   or "",
                 "sections": analysis.get("section_wise", [])
             })
 
-        # ---------------------------------
-        #   CASE STUDY REPORT
-        # ---------------------------------
+        # -------------------------
+        # CASE STUDY
+        # -------------------------
         elif "scraped_data" in raw:
 
             results.append({
@@ -142,22 +139,22 @@ def get_reports():
                 "url": raw.get("url", ""),
                 "title": raw.get("scraped_data", {}).get("title", "Untitled Case Study"),
 
-                # FIXED: convert to camelCase for frontend
+                # FIXED KEYS (camelCase)
                 "overallScore": analysis.get("overall_score", 0),
                 "phaseScores": analysis.get("phase_scores", []),
                 "summary": analysis.get("summary", ""),
                 "ux_keywords": analysis.get("ux_keywords", []),
                 "improvements": analysis.get("improvements", []),
                 "verdict": analysis.get("verdict", ""),
-                "screenshot": screenshot_url,
+                "screenshot": screenshot_url
             })
 
     return jsonify(results)
 
 
-# -----------------------------------------------------
+# ---------------------------------------
 # RAILWAY ENTRY POINT
-# -----------------------------------------------------
+# ---------------------------------------
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8080))
     app.run(host="0.0.0.0", port=port)
