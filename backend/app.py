@@ -97,19 +97,20 @@ def get_reports():
         with open(file_path, "r", encoding="utf-8") as f:
             raw = json.load(f)
 
-        # Normalize screenshot path
+        analysis = raw.get("analysis", {})
+
+        # screenshot normalization
         screenshot_raw = raw.get("screenshot")
         screenshot_url = None
         if screenshot_raw:
             screenshot_url = f"/reports/screenshots/{os.path.basename(screenshot_raw)}"
 
         # -------------------------
-        # MAIN PORTFOLIO REPORT
+        # PORTFOLIO
         # -------------------------
-        if "structured_content" in raw and "analysis" in raw:
+        if "structured_content" in raw:
 
             structured = raw.get("structured_content", {})
-            analysis = raw.get("analysis", {})
 
             results.append({
                 "type": "portfolio",
@@ -121,35 +122,35 @@ def get_reports():
                 "contact": structured.get("contact", {}),
                 "links": structured.get("all_links", []),
 
-                "overall_feedback": analysis.get("overall_feedback", ""),
+                # FIXED KEYS
+                "overall_feedback": analysis.get("overall_feedback")
+                                   or analysis.get("overall score")
+                                   or "",
                 "sections": analysis.get("section_wise", [])
             })
 
         # -------------------------
-        # CASE STUDY REPORT
+        # CASE STUDY
         # -------------------------
-        elif "analysis" in raw and "scraped_data" in raw:
-
-            analysis = raw.get("analysis", {})
+        elif "scraped_data" in raw:
 
             results.append({
                 "type": "case_study",
                 "url": raw.get("url", ""),
                 "title": raw.get("scraped_data", {}).get("title", "Untitled Case Study"),
 
+                # FIXED KEYS (camelCase)
                 "overallScore": analysis.get("overall_score", 0),
                 "phaseScores": analysis.get("phase_scores", []),
-
                 "summary": analysis.get("summary", ""),
                 "ux_keywords": analysis.get("ux_keywords", []),
-
                 "improvements": analysis.get("improvements", []),
                 "verdict": analysis.get("verdict", ""),
-
                 "screenshot": screenshot_url
             })
 
     return jsonify(results)
+
 
 
 # ---------------------------------------
