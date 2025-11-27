@@ -6,9 +6,7 @@ import os
 import json
 import re
 # GEMINI_API_KEY= None
-GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', 'AIzaSyDSsiJ8AzebMg2qv7khpnqWyZFp49W4QJU')
-# AIzaSyCXh44QZP1Dv5iPeZue2Z0SH9jhKILY3m8
-#AIzaSyDSsiJ8AzebMg2qv7khpnqWyZFp49W4QJU
+GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', '')
 USE_REAL_API = bool(GEMINI_API_KEY)
 
 if USE_REAL_API:
